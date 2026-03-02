@@ -1,0 +1,63 @@
+{
+  "round_number": 1,
+  "season": 2026,
+  "generated_at": "2026-03-03T01:25:54.847160",
+  "tips": [
+    {
+      "home_team": "Newcastle Knights",
+      "away_team": "North Queensland Cowboys",
+      "pick": "Newcastle Knights",
+      "confidence": 0.5,
+      "confidence_label": "Coin Flip"
+    },
+    {
+      "home_team": "Canterbury-Bankstown Bulldogs",
+      "away_team": "St George-Illawarra Dragons",
+      "pick": "Canterbury-Bankstown Bulldogs",
+      "confidence": 0.5,
+      "confidence_label": "Coin Flip"
+    },
+    {
+      "home_team": "Melbourne Storm",
+      "away_team": "Parramatta Eels",
+      "pick": "Melbourne Storm",
+      "confidence": 0.6392382059940985,
+      "confidence_label": "Lean"
+    },
+    {
+      "home_team": "Warriors",
+      "away_team": "Sydney Roosters",
+      "pick": "Sydney Roosters",
+      "confidence": 0.6222428780210671,
+      "confidence_label": "Lean"
+    },
+    {
+      "home_team": "Brisbane Broncos",
+      "away_team": "Penrith Panthers",
+      "pick": "Brisbane Broncos",
+      "confidence": 0.5590344016588518,
+      "confidence_label": "Lean"
+    },
+    {
+      "home_team": "Cronulla-Sutherland Sharks",
+      "away_team": "Gold Coast Titans",
+      "pick": "Cronulla-Sutherland Sharks",
+      "confidence": 0.7018604559977378,
+      "confidence_label": "Lock"
+    },
+    {
+      "home_team": "Manly-Warringah Sea Eagles",
+      "away_team": "Canberra Raiders",
+      "pick": "Canberra Raiders",
+      "confidence": 0.5011707543142931,
+      "confidence_label": "Coin Flip"
+    },
+    {
+      "home_team": "Dolphins",
+      "away_team": "South Sydney Rabbitohs",
+      "pick": "Dolphins",
+      "confidence": 0.5289916487542845,
+      "confidence_label": "Coin Flip"
+    }
+  ]
+}

@@ -57,12 +57,34 @@ class Tip:
     @property
     def confidence_label(self) -> str:
         """Human-readable confidence label."""
-        if self.confidence >= 0.75:
+        if self.confidence >= 0.70:
             return "Lock"
-        elif self.confidence >= 0.60:
+        elif self.confidence >= 0.55:
             return "Lean"
         else:
             return "Coin Flip"
+
+
+@dataclass
+class MarketView:
+    """Market consensus probabilities for a single game."""
+
+    game: Game
+    odds_sources: list[Odds]
+    consensus_home_prob: float
+    consensus_away_prob: float
+
+    @property
+    def favourite(self) -> str:
+        """The team the market favours."""
+        if self.consensus_home_prob >= self.consensus_away_prob:
+            return self.game.home_team
+        return self.game.away_team
+
+    @property
+    def favourite_prob(self) -> float:
+        """Probability assigned to the favourite."""
+        return max(self.consensus_home_prob, self.consensus_away_prob)
 
 
 @dataclass
@@ -73,6 +95,7 @@ class RoundTips:
     season: int
     tips: list[Tip] = field(default_factory=list)
     generated_at: datetime = field(default_factory=datetime.now)
+    teaching_moment: str = ""
 
     @property
     def total_games(self) -> int:

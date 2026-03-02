@@ -15,6 +15,7 @@ authors = [
 
 dependencies = [
     "anthropic",
+    "python-dotenv",
     "requests",
     "rich",
 ]
@@ -27,6 +28,9 @@ dev = [
 
 [project.scripts]
 ralph = "ralph.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ralph"]
 
 [tool.ruff]
 target-version = "py311"
