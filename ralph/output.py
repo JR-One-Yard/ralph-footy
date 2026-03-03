@@ -1,8 +1,8 @@
 """Formatted output — rich console and Markdown tip sheet generation.
 
 Produces the styled per-game output with Ralph's tip, market
-breakdown, rationale, and a rotating "Did You Know?" teaching
-moment about probability, markets, ML, or LLMs.
+snapshot, quant signal, rationale, and a rotating "Did You Know?"
+teaching moment about probability, markets, ML, or LLMs.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from ralph import __version__
-from ralph.models import MarketView, RoundTips, Tip
+from ralph.models import GameAnalysis, MarketView, RoundAnalysis, RoundTips, Tip
 
 # Default directory for Markdown tip sheets.
 _DEFAULT_TIPS_DIR = Path(__file__).resolve().parent.parent / "data" / "tips"
@@ -86,14 +86,8 @@ def _format_season_record_text(season_record: dict | None) -> str:
     overall = season_record["overall"]
     by_tier = season_record.get("by_tier", {})
 
-    # Per-tier stats: we need counts, not just percentages.
-    # Re-derive from the overall numbers where possible.
-    # The season_record dict only has totals, so we display them simply.
     record_line = f"Ralph's Season Record: {correct}/{total} ({overall:.0%})"
 
-    # Build tier breakdown from by_tier percentages.
-    # Note: we don't have per-tier counts in the record dict so we just
-    # show the accuracy percentages.
     lock_pct = by_tier.get("Lock", 0.0)
     lean_pct = by_tier.get("Lean", 0.0)
     cf_pct = by_tier.get("Coin Flip", 0.0)
@@ -102,27 +96,30 @@ def _format_season_record_text(season_record: dict | None) -> str:
     return f"{record_line}\n{tier_line}"
 
 
+def _lookup_game_analysis(
+    game_analyses: list[GameAnalysis] | None, market_view: MarketView
+) -> GameAnalysis | None:
+    """Find the GameAnalysis matching a MarketView (by game identity)."""
+    if not game_analyses:
+        return None
+    for ga in game_analyses:
+        if ga.market_view is market_view:
+            return ga
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Console formatting (rich)
 # ---------------------------------------------------------------------------
 
 
-def format_tip_console(tip: Tip, market_view: MarketView, game_number: int) -> str:
-    """Format a single game tip as a rich-markup string.
-
-    Parameters
-    ----------
-    tip:
-        The generated tip for this game.
-    market_view:
-        Market data for this game (odds sources, probabilities).
-    game_number:
-        1-based game number for display.
-
-    Returns
-    -------
-    A string containing rich markup for the tip block.
-    """
+def format_tip_console(
+    tip: Tip,
+    market_view: MarketView,
+    game_number: int,
+    game_analysis: GameAnalysis | None = None,
+) -> str:
+    """Format a single game tip as a rich-markup string."""
     game = tip.game
     label = tip.confidence_label
     colour = _confidence_colour(label)
@@ -142,17 +139,40 @@ def format_tip_console(tip: Tip, market_view: MarketView, game_number: int) -> s
         "",
     ]
 
+    # Market Snapshot (enriched when quant data available)
     if home_odds > 0 and away_odds > 0:
         lines.append(
-            f"[dim]MARKET SAYS: {game.home_team} ${home_odds:.2f} | "
-            f"{game.away_team} ${away_odds:.2f}[/dim]"
+            f"[dim]MARKET SNAPSHOT:[/dim]"
         )
         lines.append(
-            f"[dim]  Implied: {game.home_team} {home_prob_pct} | "
-            f"{game.away_team} {away_prob_pct} (after overround removal)[/dim]"
+            f"[dim]  Consensus: {game.home_team} {home_prob_pct} | "
+            f"{game.away_team} {away_prob_pct}[/dim]"
         )
+        lines.append(
+            f"[dim]  Best odds: {game.home_team} ${home_odds:.2f} | "
+            f"{game.away_team} ${away_odds:.2f}[/dim]"
+        )
+        if game_analysis:
+            lines.append(
+                f"[dim]  EV: {game_analysis.ev_favourite:+.1%} (fav) | "
+                f"{game_analysis.ev_underdog:+.1%} (dog) | "
+                f"Kelly: {game_analysis.kelly_favourite:.1%}[/dim]"
+            )
+            lines.append(
+                f"[dim]  Spread: {game_analysis.market_spread:.1%} "
+                f"({game_analysis.market_confidence_label})[/dim]"
+            )
+        else:
+            lines.append(
+                f"[dim]  (after overround removal)[/dim]"
+            )
     else:
-        lines.append("[dim]MARKET SAYS: No odds available[/dim]")
+        lines.append("[dim]MARKET SNAPSHOT: No odds available[/dim]")
+
+    # Quant Signal
+    if game_analysis:
+        lines.append("")
+        lines.append(f"[bold magenta]QUANT SIGNAL:[/bold magenta] {game_analysis.quant_signal}")
 
     if tip.rationale:
         lines.append("")
@@ -161,27 +181,33 @@ def format_tip_console(tip: Tip, market_view: MarketView, game_number: int) -> s
     return "\n".join(lines)
 
 
+def _format_desk_console(round_analysis: RoundAnalysis) -> str:
+    """Format THE DESK round overview as a rich-markup string."""
+    ra = round_analysis
+    lines = [
+        "[bold cyan]=== THE DESK — Round Overview ===[/bold cyan]",
+        "",
+        f"  Difficulty: [bold]{ra.difficulty_label}[/bold]"
+        f" (score: {ra.round_difficulty_score:.2f})",
+        f"  Round volatility: {ra.round_volatility:.1%}",
+        f"  Chalk rate: {ra.chalk_rate:.0%} of games have a clear favourite",
+        f"  Upset watch: {ra.upset_watch_count} game(s) with genuine uncertainty",
+    ]
+
+    warning = ra.portfolio_warning
+    if warning:
+        lines.append(f"  [yellow]Portfolio warning:[/yellow] {warning}")
+
+    return "\n".join(lines)
+
+
 def format_round_console(
     round_tips: RoundTips,
     market_views: list[MarketView],
     season_record: dict | None = None,
+    round_analysis: RoundAnalysis | None = None,
 ) -> str:
-    """Format the full round as a rich-markup string.
-
-    Parameters
-    ----------
-    round_tips:
-        The complete round tips including teaching_moment.
-    market_views:
-        Market data for each game (same order as tips).
-    season_record:
-        Optional season record dict.  Pass ``None`` or an empty-list
-        record to show the 'No results yet' footer.
-
-    Returns
-    -------
-    A string containing rich markup for the entire tip sheet.
-    """
+    """Format the full round as a rich-markup string."""
     parts: list[str] = []
 
     # Header
@@ -194,9 +220,17 @@ def format_round_console(
     parts.append(header)
     parts.append("")
 
+    # THE DESK — Round Overview
+    if round_analysis:
+        parts.append(_format_desk_console(round_analysis))
+        parts.append("")
+
+    game_analyses = round_analysis.game_analyses if round_analysis else None
+
     # Per-game tips
     for i, (tip, mv) in enumerate(zip(round_tips.tips, market_views)):
-        parts.append(format_tip_console(tip, mv, game_number=i + 1))
+        ga = _lookup_game_analysis(game_analyses, mv)
+        parts.append(format_tip_console(tip, mv, game_number=i + 1, game_analysis=ga))
         parts.append("")  # blank line separator
 
     # Teaching moment
@@ -222,27 +256,36 @@ def format_round_console(
 # ---------------------------------------------------------------------------
 
 
+def _format_desk_markdown(round_analysis: RoundAnalysis) -> list[str]:
+    """Format THE DESK round overview as Markdown lines."""
+    ra = round_analysis
+    lines = [
+        "## THE DESK — Round Overview",
+        "",
+        f"**Difficulty:** {ra.difficulty_label}"
+        f" (score: {ra.round_difficulty_score:.2f})",
+        f"- Round volatility: {ra.round_volatility:.1%}",
+        f"- Chalk rate: {ra.chalk_rate:.0%} of games have a clear favourite",
+        f"- Upset watch: {ra.upset_watch_count} game(s) with genuine uncertainty",
+    ]
+
+    warning = ra.portfolio_warning
+    if warning:
+        lines.append(f"- **Portfolio warning:** {warning}")
+
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    return lines
+
+
 def format_round_markdown(
     round_tips: RoundTips,
     market_views: list[MarketView],
     season_record: dict | None = None,
+    round_analysis: RoundAnalysis | None = None,
 ) -> str:
-    """Generate the full tip sheet as a Markdown string.
-
-    Parameters
-    ----------
-    round_tips:
-        The complete round tips including teaching_moment.
-    market_views:
-        Market data for each game (same order as tips).
-    season_record:
-        Optional season record dict.
-
-    Returns
-    -------
-    A Markdown-formatted string suitable for saving to a file or
-    pasting into Slack.
-    """
+    """Generate the full tip sheet as a Markdown string."""
     lines: list[str] = []
 
     generated = round_tips.generated_at.strftime("%Y-%m-%d %H:%M")
@@ -254,6 +297,12 @@ def format_round_markdown(
     lines.append("")
     lines.append("---")
     lines.append("")
+
+    # THE DESK — Round Overview
+    if round_analysis:
+        lines.extend(_format_desk_markdown(round_analysis))
+
+    game_analyses = round_analysis.game_analyses if round_analysis else None
 
     # Per-game blocks
     for i, (tip, mv) in enumerate(zip(round_tips.tips, market_views)):
@@ -268,6 +317,8 @@ def format_round_markdown(
         home_prob_pct = f"{round(mv.consensus_home_prob * 100)}%"
         away_prob_pct = f"{round(mv.consensus_away_prob * 100)}%"
 
+        ga = _lookup_game_analysis(game_analyses, mv)
+
         lines.append(f"## GAME {game_num}: {game.home_team} vs {game.away_team}")
         lines.append(f"**{game.venue}** | {kickoff_str}")
         lines.append("")
@@ -275,18 +326,35 @@ def format_round_markdown(
         lines.append("")
 
         if home_odds > 0 and away_odds > 0:
+            lines.append("**MARKET SNAPSHOT:**")
             lines.append(
-                f"**MARKET SAYS:** {game.home_team} ${home_odds:.2f} | "
+                f"- Consensus: {game.home_team} {home_prob_pct} | "
+                f"{game.away_team} {away_prob_pct}"
+            )
+            lines.append(
+                f"- Best odds: {game.home_team} ${home_odds:.2f} | "
                 f"{game.away_team} ${away_odds:.2f}"
             )
-            lines.append(
-                f"Implied: {game.home_team} {home_prob_pct} | "
-                f"{game.away_team} {away_prob_pct} (after overround removal)"
-            )
+            if ga:
+                lines.append(
+                    f"- EV: {ga.ev_favourite:+.1%} (fav) | "
+                    f"{ga.ev_underdog:+.1%} (dog) | "
+                    f"Kelly: {ga.kelly_favourite:.1%}"
+                )
+                lines.append(
+                    f"- Spread: {ga.market_spread:.1%} ({ga.market_confidence_label})"
+                )
+            else:
+                lines.append("- (after overround removal)")
         else:
-            lines.append("**MARKET SAYS:** No odds available")
+            lines.append("**MARKET SNAPSHOT:** No odds available")
 
         lines.append("")
+
+        # Quant Signal
+        if ga:
+            lines.append(f"**QUANT SIGNAL:** {ga.quant_signal}")
+            lines.append("")
 
         if tip.rationale:
             lines.append("**RATIONALE:**")
@@ -339,26 +407,9 @@ def save_tip_sheet(
     market_views: list[MarketView],
     season_record: dict | None = None,
     data_dir: Path | None = None,
+    round_analysis: RoundAnalysis | None = None,
 ) -> Path:
-    """Write the Markdown tip sheet to disk.
-
-    Parameters
-    ----------
-    round_tips:
-        The complete round tips.
-    market_views:
-        Market data for each game.
-    season_record:
-        Optional season record dict.
-    data_dir:
-        Override the tip sheet directory (useful for testing).
-        When provided, the file is written directly into *data_dir*.
-        When ``None``, the default ``data/tips/`` directory is used.
-
-    Returns
-    -------
-    The :class:`Path` of the written Markdown file.
-    """
+    """Write the Markdown tip sheet to disk."""
     if data_dir is not None:
         out_dir = data_dir
     else:
@@ -369,7 +420,9 @@ def save_tip_sheet(
     filename = f"round_{round_tips.round_number:02d}.md"
     filepath = out_dir / filename
 
-    markdown = format_round_markdown(round_tips, market_views, season_record)
+    markdown = format_round_markdown(
+        round_tips, market_views, season_record, round_analysis
+    )
     filepath.write_text(markdown, encoding="utf-8")
 
     return filepath

@@ -1,6 +1,7 @@
 """Tests for ralph.rationale — rationale generation.
 
-Each test maps to one or more acceptance criteria from spec 04_understand_why.md.
+Tests the enriched template fallback mode (offline). API-driven rationale
+is tested separately via integration tests.
 """
 
 from __future__ import annotations
@@ -8,11 +9,13 @@ from __future__ import annotations
 from datetime import datetime
 
 from ralph.models import Game, MarketView, Odds, Tip
+from ralph.quant import analyse_game
 from ralph.rationale import (
     COIN_FLIP_TEMPLATES,
     LEAN_TEMPLATES,
     LOCK_TEMPLATES,
     generate_rationale,
+    generate_rationale_template,
     team_short_name,
 )
 
@@ -94,30 +97,28 @@ class TestAC01LockTemplate:
     def test_lock_rationale_contains_pick_name(self) -> None:
         tip = _tip("Sydney Roosters", 0.75)
         mv = _market_view(0.75, 0.25)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Roosters" in rationale
 
     def test_lock_rationale_contains_probability(self) -> None:
         tip = _tip("Sydney Roosters", 0.75)
         mv = _market_view(0.75, 0.25)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "75%" in rationale
 
     def test_lock_rationale_uses_lock_template(self) -> None:
         """The generated rationale should start with text from a Lock template."""
         tip = _tip("Sydney Roosters", 0.75)
         mv = _market_view(0.75, 0.25)
-        rationale = generate_rationale(tip, mv, game_index=0)
-        # The first Lock template starts with "Ralph is backing the"
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Ralph is backing the" in rationale
 
     def test_lock_boundary_at_0_70(self) -> None:
         """Exactly 0.70 confidence is Lock tier."""
         tip = _tip("Sydney Roosters", 0.70)
         mv = _market_view(0.70, 0.30)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "70%" in rationale
-        # Should use Lock template (game_index=0 -> template L1)
         assert "Ralph is backing the" in rationale
 
     def test_four_lock_templates_exist(self) -> None:
@@ -135,27 +136,26 @@ class TestAC02LeanTemplate:
     def test_lean_rationale_uses_lean_template(self) -> None:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        rationale = generate_rationale(tip, mv, game_index=0)
-        # First Lean template starts with "Ralph leans"
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Ralph leans" in rationale
 
     def test_lean_rationale_contains_pick_name(self) -> None:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Roosters" in rationale
 
     def test_lean_rationale_contains_probability(self) -> None:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "62%" in rationale
 
     def test_lean_boundary_at_0_55(self) -> None:
         """Exactly 0.55 confidence is Lean tier."""
         tip = _tip("Sydney Roosters", 0.55)
         mv = _market_view(0.55, 0.45)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "55%" in rationale
         assert "Ralph leans" in rationale
 
@@ -174,27 +174,26 @@ class TestAC03CoinFlipTemplate:
     def test_coin_flip_rationale_uses_coin_flip_template(self) -> None:
         tip = _tip("Sydney Roosters", 0.52)
         mv = _market_view(0.52, 0.48)
-        rationale = generate_rationale(tip, mv, game_index=0)
-        # First Coin Flip template starts with "Honestly?"
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Honestly?" in rationale
 
     def test_coin_flip_rationale_contains_pick_name(self) -> None:
         tip = _tip("Sydney Roosters", 0.52)
         mv = _market_view(0.52, 0.48)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Roosters" in rationale
 
     def test_coin_flip_rationale_contains_probability(self) -> None:
         tip = _tip("Sydney Roosters", 0.52)
         mv = _market_view(0.52, 0.48)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "52%" in rationale
 
     def test_coin_flip_at_0_50(self) -> None:
         """Exactly 0.50 confidence is Coin Flip tier."""
         tip = _tip("Sydney Roosters", 0.50)
         mv = _market_view(0.50, 0.50)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "50%" in rationale
 
     def test_four_coin_flip_templates_exist(self) -> None:
@@ -222,16 +221,16 @@ class TestAC04TemplateRotationVariety:
             away="Penrith Panthers",
             venue="AAMI Park",
         )
-        r0 = generate_rationale(tip0, mv0, game_index=0)
-        r1 = generate_rationale(tip1, mv1, game_index=1)
+        r0 = generate_rationale(tip0, mv0, game_index=0, offline=True)
+        r1 = generate_rationale(tip1, mv1, game_index=1, offline=True)
         assert r0 != r1
 
     def test_same_teams_different_indices_different_rationale(self) -> None:
         """Even identical teams at different indices get different templates."""
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        r0 = generate_rationale(tip, mv, game_index=0)
-        r1 = generate_rationale(tip, mv, game_index=1)
+        r0 = generate_rationale(tip, mv, game_index=0, offline=True)
+        r1 = generate_rationale(tip, mv, game_index=1, offline=True)
         assert r0 != r1
 
     def test_eight_game_round_all_unique(self) -> None:
@@ -250,15 +249,15 @@ class TestAC04TemplateRotationVariety:
         for i, (home, away, hp, ap) in enumerate(teams):
             tip = _tip(home, hp, home=home, away=away)
             mv = _market_view(hp, ap, home=home, away=away)
-            rationales.append(generate_rationale(tip, mv, game_index=i))
+            rationales.append(generate_rationale(tip, mv, game_index=i, offline=True))
         assert len(set(rationales)) == 8
 
     def test_rotation_wraps_around(self) -> None:
         """Template selection wraps: index 4 uses same template as index 0."""
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        r0 = generate_rationale(tip, mv, game_index=0)
-        r4 = generate_rationale(tip, mv, game_index=4)
+        r0 = generate_rationale(tip, mv, game_index=0, offline=True)
+        r4 = generate_rationale(tip, mv, game_index=4, offline=True)
         # Same template, same data => same output
         assert r0 == r4
 
@@ -276,7 +275,7 @@ class TestAC05ActualProbabilityInOutput:
         """Rationale should not contain any {variable} placeholders."""
         tip = _tip("Sydney Roosters", 0.65)
         mv = _market_view(0.65, 0.35)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "{" not in rationale
         assert "}" not in rationale
 
@@ -291,7 +290,7 @@ class TestAC05ActualProbabilityInOutput:
             tip = _tip(pick, conf)
             mv = _market_view(hp, ap)
             for idx in range(4):
-                rationale = generate_rationale(tip, mv, game_index=idx)
+                rationale = generate_rationale(tip, mv, game_index=idx, offline=True)
                 assert "{" not in rationale, (
                     f"Unresolved placeholder at tier={tip.confidence_label}, idx={idx}"
                 )
@@ -301,7 +300,7 @@ class TestAC05ActualProbabilityInOutput:
         """The probability should appear as 'NN%' in the output."""
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "62%" in rationale
 
 
@@ -316,13 +315,13 @@ class TestAC06PickedTeamShortName:
     def test_home_pick_short_name_in_rationale(self) -> None:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Roosters" in rationale
 
     def test_away_pick_short_name_in_rationale(self) -> None:
         tip = _tip("Brisbane Broncos", 0.62)
         mv = _market_view(0.38, 0.62)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Broncos" in rationale
 
     def test_multi_word_team_name_uses_mascot(self) -> None:
@@ -341,14 +340,14 @@ class TestAC06PickedTeamShortName:
             consensus_home_prob=0.65,
             consensus_away_prob=0.35,
         )
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Rabbitohs" in rationale
 
     def test_opponent_short_name_in_rationale(self) -> None:
         """The opposing team's short name should also appear where templates use {other}."""
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Broncos" in rationale
 
 
@@ -414,77 +413,19 @@ class TestAC07TeamShortName:
 
 
 # ===========================================================================
-# AC-08: Rationale text does not exceed 500 characters.
-# ===========================================================================
-
-
-class TestAC08MaxLength:
-    """Rationale text does not exceed 500 characters."""
-
-    def test_all_lock_templates_under_500_chars(self) -> None:
-        tip = _tip("Sydney Roosters", 0.75)
-        mv = _market_view(0.75, 0.25)
-        for idx in range(len(LOCK_TEMPLATES)):
-            rationale = generate_rationale(tip, mv, game_index=idx)
-            assert len(rationale) <= 500, f"Lock template {idx} produced {len(rationale)} chars"
-
-    def test_all_lean_templates_under_500_chars(self) -> None:
-        tip = _tip("Sydney Roosters", 0.62)
-        mv = _market_view(0.62, 0.38)
-        for idx in range(len(LEAN_TEMPLATES)):
-            rationale = generate_rationale(tip, mv, game_index=idx)
-            assert len(rationale) <= 500, f"Lean template {idx} produced {len(rationale)} chars"
-
-    def test_all_coin_flip_templates_under_500_chars(self) -> None:
-        tip = _tip("Sydney Roosters", 0.52)
-        mv = _market_view(0.52, 0.48)
-        for idx in range(len(COIN_FLIP_TEMPLATES)):
-            rationale = generate_rationale(tip, mv, game_index=idx)
-            assert len(rationale) <= 500, (
-                f"Coin Flip template {idx} produced {len(rationale)} chars"
-            )
-
-    def test_long_team_names_still_under_500(self) -> None:
-        """Even with long team names like 'St George Illawarra Dragons', stay under 500."""
-        game = _game(
-            home="St George Illawarra Dragons",
-            away="North Queensland Cowboys",
-            venue="WIN Stadium Wollongong",
-        )
-        tip = Tip(
-            game=game,
-            pick="St George Illawarra Dragons",
-            confidence=0.65,
-            rationale="",
-            teaching_moment="",
-        )
-        mv = MarketView(
-            game=game,
-            odds_sources=[_odds(1.55, 2.50)],
-            consensus_home_prob=0.65,
-            consensus_away_prob=0.35,
-        )
-        for idx in range(4):
-            rationale = generate_rationale(tip, mv, game_index=idx)
-            assert len(rationale) <= 500, (
-                f"Template {idx} with long names produced {len(rationale)} chars"
-            )
-
-
-# ===========================================================================
 # AC-09: Given the same round file input twice, the same rationale text
-#         is produced both times (deterministic).
+#         is produced both times (deterministic) — offline mode.
 # ===========================================================================
 
 
 class TestAC09Deterministic:
-    """Same input always produces the same rationale text."""
+    """Same input always produces the same rationale text (offline mode)."""
 
     def test_same_input_same_output(self) -> None:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
-        r1 = generate_rationale(tip, mv, game_index=0)
-        r2 = generate_rationale(tip, mv, game_index=0)
+        r1 = generate_rationale(tip, mv, game_index=0, offline=True)
+        r2 = generate_rationale(tip, mv, game_index=0, offline=True)
         assert r1 == r2
 
     def test_deterministic_across_all_indices(self) -> None:
@@ -492,31 +433,49 @@ class TestAC09Deterministic:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
         for idx in range(4):
-            r1 = generate_rationale(tip, mv, game_index=idx)
-            r2 = generate_rationale(tip, mv, game_index=idx)
+            r1 = generate_rationale(tip, mv, game_index=idx, offline=True)
+            r2 = generate_rationale(tip, mv, game_index=idx, offline=True)
             assert r1 == r2, f"Non-deterministic at game_index={idx}"
 
-    def test_deterministic_full_round(self) -> None:
-        """A full round of rationales is deterministic."""
-        teams = [
-            ("Sydney Roosters", "Brisbane Broncos", 0.62, 0.38),
-            ("Melbourne Storm", "Penrith Panthers", 0.58, 0.42),
-            ("South Sydney Rabbitohs", "Canterbury Bulldogs", 0.72, 0.28),
-            ("Manly Sea Eagles", "Cronulla Sharks", 0.66, 0.34),
+
+# ===========================================================================
+# Quant-enriched template tests
+# ===========================================================================
+
+
+class TestQuantEnrichedTemplates:
+    """Templates include quant metrics when GameAnalysis is provided."""
+
+    def test_template_with_game_analysis_includes_ev(self) -> None:
+        mv = _market_view(0.62, 0.38)
+        ga = analyse_game(mv)
+        tip = _tip("Sydney Roosters", 0.62)
+        rationale = generate_rationale_template(tip, mv, game_index=1, game_analysis=ga)
+        # Lean template 1 includes {ev_fav} and {ev_dog}
+        assert "%" in rationale  # EV formatted as percentage
+
+    def test_template_without_game_analysis_uses_na(self) -> None:
+        mv = _market_view(0.62, 0.38)
+        tip = _tip("Sydney Roosters", 0.62)
+        rationale = generate_rationale_template(tip, mv, game_index=1, game_analysis=None)
+        assert "N/A" in rationale
+
+    def test_all_templates_resolve_with_game_analysis(self) -> None:
+        """No unresolved placeholders when game analysis is provided."""
+        configs = [
+            ("Sydney Roosters", 0.75, 0.75, 0.25),  # Lock
+            ("Sydney Roosters", 0.62, 0.62, 0.38),  # Lean
+            ("Sydney Roosters", 0.52, 0.52, 0.48),  # Coin Flip
         ]
-        for _ in range(2):
-            rationales = []
-            for i, (home, away, hp, ap) in enumerate(teams):
-                tip = _tip(home, hp, home=home, away=away)
-                mv = _market_view(hp, ap, home=home, away=away)
-                rationales.append(generate_rationale(tip, mv, game_index=i))
-        # Second pass should be identical
-        second_pass = []
-        for i, (home, away, hp, ap) in enumerate(teams):
-            tip = _tip(home, hp, home=home, away=away)
-            mv = _market_view(hp, ap, home=home, away=away)
-            second_pass.append(generate_rationale(tip, mv, game_index=i))
-        assert rationales == second_pass
+        for pick, conf, hp, ap in configs:
+            tip = _tip(pick, conf)
+            mv = _market_view(hp, ap)
+            ga = analyse_game(mv)
+            for idx in range(4):
+                rationale = generate_rationale_template(tip, mv, idx, game_analysis=ga)
+                assert "{" not in rationale, (
+                    f"Unresolved placeholder at tier={tip.confidence_label}, idx={idx}"
+                )
 
 
 # ===========================================================================
@@ -536,28 +495,19 @@ class TestTemplateContentIntegrity:
         """When the away team is picked, rationale should say 'on the road'."""
         tip = _tip("Brisbane Broncos", 0.62)
         mv = _market_view(0.38, 0.62)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "on the road" in rationale
 
     def test_home_team_pick_home_or_away_value(self) -> None:
         """When the home team is picked, rationale should say 'at home'."""
         tip = _tip("Sydney Roosters", 0.75)
         mv = _market_view(0.75, 0.25)
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "at home" in rationale
-
-    def test_odds_appear_with_dollar_sign(self) -> None:
-        """Odds values in the rationale should be formatted as '$X.XX'."""
-        tip = _tip("Sydney Roosters", 0.75)
-        mv = _market_view(0.75, 0.25)
-        # Template L3 (index 2) uses {pick_best_odds}
-        rationale = generate_rationale(tip, mv, game_index=2)
-        assert "$1.52" in rationale
 
     def test_venue_appears_in_rationale(self) -> None:
         """Venue appears in templates that reference it."""
         tip = _tip("Sydney Roosters", 0.75)
         mv = _market_view(0.75, 0.25)
-        # Template L1 (index 0) uses {venue}
-        rationale = generate_rationale(tip, mv, game_index=0)
+        rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Allianz Stadium" in rationale

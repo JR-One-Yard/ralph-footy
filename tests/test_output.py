@@ -381,7 +381,7 @@ class TestFormatRoundMarkdown:
     ):
         """AC-06: market odds and implied probabilities."""
         md = format_round_markdown(sample_round, [friday_mv, saturday_mv])
-        assert "**MARKET SAYS:**" in md
+        assert "**MARKET SNAPSHOT:**" in md
         assert "$1.52" in md  # best home odds for Roosters
         assert "after overround removal" in md
 
