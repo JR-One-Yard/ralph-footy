@@ -93,12 +93,14 @@ class TestAC01ValidFixtureLoading:
         assert len(odds_map[key]) == 2
         assert all(isinstance(o, Odds) for o in odds_map[key])
 
-    def test_round_01_real_file(self) -> None:
-        """Integration: load the actual round_01.json from the project data directory."""
-        games, odds_map = load_fixtures(1)
-        assert len(games) == 8
-        assert all(isinstance(g, Game) for g in games)
-        assert len(odds_map) == 8
+    def test_missing_fixture_file_raises(self) -> None:
+        """Loading a round with no local fixture file raises ValueError."""
+        # Default data dir should not have fixture files (they were removed).
+        # If the file doesn't exist, load_fixtures should raise ValueError.
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            with pytest.raises(ValueError, match="Fixture file not found"):
+                load_fixtures(99, data_dir=Path(td))
 
 
 # ===========================================================================

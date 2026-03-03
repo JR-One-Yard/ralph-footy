@@ -1,4 +1,4 @@
-"""Ralph CLI — entry point for the footy forecaster."""
+"""CLI — entry point for NRL_FOOTIEFORECASTER."""
 
 from __future__ import annotations
 
@@ -25,10 +25,10 @@ from ralph.tracking import (
 
 
 def _print_banner(console: Console) -> None:
-    """Print the Ralph startup banner using rich."""
+    """Print the startup banner using rich."""
     console.print(
         Panel.fit(
-            f"[bold green]\U0001f3c9 RALPH \u2014 Footy Forecaster v{__version__}[/bold green]",
+            f"[bold green]\U0001f3c9 NRL_FOOTIEFORECASTER v{__version__}[/bold green]",
             border_style="green",
         )
     )
@@ -71,15 +71,15 @@ def cmd_tip(args: argparse.Namespace) -> None:
     """Handle the 'tip' subcommand — full pipeline."""
     console = Console()
     round_number = args.round
-    live = getattr(args, "live", False)
+    local = getattr(args, "local", False)
     offline = getattr(args, "offline", False)
 
     try:
-        # 1. Load fixtures and odds
-        if live:
-            games, odds_map = _fetch_live_data(round_number, console)
-        else:
+        # 1. Load fixtures and odds — live by default, --local for file fallback
+        if local:
             games, odds_map = load_fixtures(round_number)
+        else:
+            games, odds_map = _fetch_live_data(round_number, console)
 
         # 2. Build market views
         market_views = build_market_views(games, odds_map)
@@ -197,7 +197,7 @@ def cmd_record(args: argparse.Namespace) -> None:
     overall = record["overall"]
     by_tier = record.get("by_tier", {})
 
-    console.print("[bold green]Ralph's Season Record[/bold green]")
+    console.print("[bold green]Season Record[/bold green]")
     console.print(f"  Rounds completed: {', '.join(str(r) for r in completed)}")
     console.print(f"  Overall: {correct}/{total} ({overall:.0%})")
     console.print()
@@ -211,7 +211,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser."""
     parser = argparse.ArgumentParser(
         prog="ralph",
-        description="Ralph \u2014 NRL Footy Forecaster. Tip well. Teach well.",
+        description="NRL_FOOTIEFORECASTER — Quantitative NRL tipping. Tip well. Teach well.",
     )
     parser.add_argument(
         "--version",
@@ -233,10 +233,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Round number to generate tips for (1-27)",
     )
     tip_parser.add_argument(
-        "--live",
+        "--local",
         action="store_true",
         default=False,
-        help="Fetch live fixtures from Champion Data and odds from The Odds API",
+        help="Use local fixture files instead of fetching live data from APIs",
     )
     tip_parser.add_argument(
         "--offline",
@@ -260,14 +260,14 @@ def build_parser() -> argparse.ArgumentParser:
     # record subcommand
     subparsers.add_parser(
         "record",
-        help="Show Ralph's season record",
+        help="Show the season record",
     )
 
     return parser
 
 
 def main() -> None:
-    """Main entry point for the Ralph CLI."""
+    """Main entry point for the CLI."""
     parser = build_parser()
     args = parser.parse_args()
 
@@ -281,11 +281,14 @@ def main() -> None:
     elif args.command == "record":
         cmd_record(args)
     else:
-        console.print("Ralph is thinking about this week's NRL tips...")
+        console.print("Ready to generate this week's NRL tips...")
         console.print(
             "\nRun [bold cyan]ralph tip --round N[/bold cyan] to generate tips for a round"
         )
-        console.print("Run [bold cyan]ralph tip --round N --live[/bold cyan] to use live API data")
+        console.print(
+            "Run [bold cyan]ralph tip --round N --local[/bold cyan] "
+            "to use local fixture files instead of live APIs"
+        )
         console.print(
             "Run [bold cyan]ralph tip --round N --offline[/bold cyan] "
             "to skip Claude API calls"

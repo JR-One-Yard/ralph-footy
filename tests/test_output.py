@@ -106,7 +106,7 @@ def lock_tip(friday_game: Game) -> Tip:
         game=friday_game,
         pick="Sydney Roosters",
         confidence=0.75,
-        rationale="Ralph is very confident here.",
+        rationale="The Roosters at 75% are a strong back here.",
         teaching_moment="",
     )
 
@@ -117,7 +117,7 @@ def lean_tip(friday_game: Game) -> Tip:
         game=friday_game,
         pick="Sydney Roosters",
         confidence=0.6173,
-        rationale="Ralph leans Roosters here.",
+        rationale="The Roosters are favoured at 62% and the data supports it.",
         teaching_moment="",
     )
 
@@ -221,7 +221,7 @@ class TestFormatTipConsole:
     def test_contains_rationale(self, lean_tip: Tip, friday_mv: MarketView):
         """AC-07: rationale shown."""
         result = format_tip_console(lean_tip, friday_mv, game_number=1)
-        assert "Ralph leans Roosters here." in result
+        assert "Roosters are favoured at 62%" in result
 
     def test_ac15_odds_with_dollar_sign(self, lean_tip: Tip, friday_mv: MarketView):
         """AC-15: odds displayed with dollar sign prefix."""
@@ -319,10 +319,10 @@ class TestFormatRoundConsole:
     def test_footer_quote(
         self, sample_round: RoundTips, friday_mv: MarketView, saturday_mv: MarketView
     ):
-        """Footer includes Ralph's signature quote."""
+        """Footer includes signature tagline and version."""
         result = format_round_console(sample_round, [friday_mv, saturday_mv])
-        assert "I don't know everything about footy" in result
-        assert "Ralph v" in result
+        assert "The market is the model" in result
+        assert "NRL_FOOTIEFORECASTER v" in result
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +338,7 @@ class TestFormatRoundMarkdown:
     ):
         """AC-11: valid Markdown with proper header."""
         md = format_round_markdown(sample_round, [friday_mv, saturday_mv])
-        assert md.startswith("# RALPH")
+        assert md.startswith("# NRL_FOOTIEFORECASTER")
         assert "Round 1" in md
 
     def test_contains_all_game_sections(
@@ -362,7 +362,7 @@ class TestFormatRoundMarkdown:
     ):
         """AC-05: pick with confidence percentage and tier label."""
         md = format_round_markdown(sample_round, [friday_mv, saturday_mv])
-        assert "**RALPH'S TIP:**" in md
+        assert "**THE TIP:**" in md
         assert "Lean" in md
         assert "Coin Flip" in md
 
@@ -399,7 +399,7 @@ class TestFormatRoundMarkdown:
         """AC-07: rationale text in output."""
         md = format_round_markdown(sample_round, [friday_mv, saturday_mv])
         assert "**RATIONALE:**" in md
-        assert "Ralph leans Roosters here." in md
+        assert "Roosters are favoured at 62%" in md
 
     def test_ac08_teaching_moment(
         self, sample_round: RoundTips, friday_mv: MarketView, saturday_mv: MarketView
@@ -445,10 +445,10 @@ class TestFormatRoundMarkdown:
     def test_footer_quote_and_version(
         self, sample_round: RoundTips, friday_mv: MarketView, saturday_mv: MarketView
     ):
-        """Footer includes Ralph's quote and version."""
+        """Footer includes tagline and version."""
         md = format_round_markdown(sample_round, [friday_mv, saturday_mv])
-        assert "I don't know everything about footy" in md
-        assert "Ralph v" in md
+        assert "The market is the model" in md
+        assert "NRL_FOOTIEFORECASTER v" in md
 
     def test_generated_date(
         self, sample_round: RoundTips, friday_mv: MarketView, saturday_mv: MarketView
@@ -499,7 +499,7 @@ class TestSaveTipSheet:
         """AC-11: file contains valid Markdown."""
         result_path = save_tip_sheet(sample_round, [friday_mv, saturday_mv], data_dir=tmp_path)
         content = result_path.read_text(encoding="utf-8")
-        assert content.startswith("# RALPH")
+        assert content.startswith("# NRL_FOOTIEFORECASTER")
         assert "Sydney Roosters" in content
         assert "DID YOU KNOW?" in content
 

@@ -1,8 +1,8 @@
 """Formatted output — rich console and Markdown tip sheet generation.
 
-Produces the styled per-game output with Ralph's tip, market
-snapshot, quant signal, rationale, and a rotating "Did You Know?"
-teaching moment about probability, markets, ML, or LLMs.
+Produces the styled per-game output with the tip, market snapshot,
+quant signal, rationale, and a rotating "Did You Know?" teaching moment
+about probability, markets, ML, or LLMs.
 """
 
 from __future__ import annotations
@@ -79,14 +79,14 @@ def _format_season_record_text(season_record: dict | None) -> str:
     Returns the 'No results yet' variant when there is no record.
     """
     if not season_record or not season_record.get("rounds_completed"):
-        return "Ralph's Season Record: No results yet — check back after the round!"
+        return "Season Record: No results yet — check back after the round!"
 
     total = season_record["total"]
     correct = season_record["correct"]
     overall = season_record["overall"]
     by_tier = season_record.get("by_tier", {})
 
-    record_line = f"Ralph's Season Record: {correct}/{total} ({overall:.0%})"
+    record_line = f"Season Record: {correct}/{total} ({overall:.0%})"
 
     lock_pct = by_tier.get("Lock", 0.0)
     lean_pct = by_tier.get("Lean", 0.0)
@@ -135,7 +135,7 @@ def format_tip_console(
         f"[bold cyan]=== GAME {game_number}: {game.home_team} vs {game.away_team} ===[/bold cyan]",
         f"{game.venue} | {kickoff_str}",
         "",
-        f"[bold {colour}]RALPH'S TIP: {tip.pick} ({conf_pct} confidence — {label})[/bold {colour}]",
+        f"[bold {colour}]THE TIP: {tip.pick} ({conf_pct} confidence — {label})[/bold {colour}]",
         "",
     ]
 
@@ -213,7 +213,7 @@ def format_round_console(
     # Header
     generated = round_tips.generated_at.strftime("%Y-%m-%d %H:%M")
     header = (
-        f"[bold green]RALPH — Footy Forecaster[/bold green]\n"
+        f"[bold green]NRL_FOOTIEFORECASTER[/bold green]\n"
         f"NRL {round_tips.season} — Round {round_tips.round_number} Tips\n"
         f"Generated: {generated}"
     )
@@ -244,9 +244,9 @@ def format_round_console(
     parts.append(f"[dim]{record_text}[/dim]")
     parts.append("")
     parts.append(
-        '[dim]"I don\'t know everything about footy, but I know what the bookies think."[/dim]'
+        '[dim]"The market is the model. Everything else is noise."[/dim]'
     )
-    parts.append(f"[dim]— Ralph v{__version__}[/dim]")
+    parts.append(f"[dim]— NRL_FOOTIEFORECASTER v{__version__}[/dim]")
 
     return "\n".join(parts)
 
@@ -291,7 +291,10 @@ def format_round_markdown(
     generated = round_tips.generated_at.strftime("%Y-%m-%d %H:%M")
 
     # Header
-    lines.append(f"# RALPH — NRL {round_tips.season} Round {round_tips.round_number} Tips")
+    lines.append(
+        f"# NRL_FOOTIEFORECASTER — NRL {round_tips.season}"
+        f" Round {round_tips.round_number} Tips"
+    )
     lines.append("")
     lines.append(f"*Generated {generated}*")
     lines.append("")
@@ -322,7 +325,7 @@ def format_round_markdown(
         lines.append(f"## GAME {game_num}: {game.home_team} vs {game.away_team}")
         lines.append(f"**{game.venue}** | {kickoff_str}")
         lines.append("")
-        lines.append(f"**RALPH'S TIP:** {tip.pick} ({conf_pct} confidence — {label})")
+        lines.append(f"**THE TIP:** {tip.pick} ({conf_pct} confidence — {label})")
         lines.append("")
 
         if home_odds > 0 and away_odds > 0:
@@ -382,16 +385,16 @@ def format_round_markdown(
         lock_pct = by_tier.get("Lock", 0.0)
         lean_pct = by_tier.get("Lean", 0.0)
         cf_pct = by_tier.get("Coin Flip", 0.0)
-        lines.append(f"*Ralph's Season Record: {correct}/{total} ({overall:.0%})*")
+        lines.append(f"*Season Record: {correct}/{total} ({overall:.0%})*")
         lines.append(f"*Lock: {lock_pct:.0%} | Lean: {lean_pct:.0%} | Coin Flip: {cf_pct:.0%}*")
     else:
-        lines.append("*Ralph's Season Record: No results yet — check back after the round!*")
+        lines.append("*Season Record: No results yet — check back after the round!*")
 
     lines.append("")
     lines.append("---")
     lines.append("")
-    lines.append('*"I don\'t know everything about footy, but I know what the bookies think."*')
-    lines.append(f"*— Ralph v{__version__}*")
+    lines.append('*"The market is the model. Everything else is noise."*')
+    lines.append(f"*— NRL_FOOTIEFORECASTER v{__version__}*")
     lines.append("")
 
     return "\n".join(lines)

@@ -107,11 +107,12 @@ class TestAC01LockTemplate:
         assert "75%" in rationale
 
     def test_lock_rationale_uses_lock_template(self) -> None:
-        """The generated rationale should start with text from a Lock template."""
+        """The generated rationale should use a Lock-tier template."""
         tip = _tip("Sydney Roosters", 0.75)
         mv = _market_view(0.75, 0.25)
         rationale = generate_rationale(tip, mv, game_index=0, offline=True)
-        assert "Ralph is backing the" in rationale
+        # Lock template 0 starts with "The {pick} at {pick_prob_pct}"
+        assert "as close to a certainty" in rationale
 
     def test_lock_boundary_at_0_70(self) -> None:
         """Exactly 0.70 confidence is Lock tier."""
@@ -119,7 +120,7 @@ class TestAC01LockTemplate:
         mv = _market_view(0.70, 0.30)
         rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "70%" in rationale
-        assert "Ralph is backing the" in rationale
+        assert "as close to a certainty" in rationale
 
     def test_four_lock_templates_exist(self) -> None:
         assert len(LOCK_TEMPLATES) == 4
@@ -137,7 +138,9 @@ class TestAC02LeanTemplate:
         tip = _tip("Sydney Roosters", 0.62)
         mv = _market_view(0.62, 0.38)
         rationale = generate_rationale(tip, mv, game_index=0, offline=True)
-        assert "Ralph leans" in rationale
+        # Lean template 0 contains "capable of making this uncomfortable"
+        assert "Roosters" in rationale
+        assert "62%" in rationale
 
     def test_lean_rationale_contains_pick_name(self) -> None:
         tip = _tip("Sydney Roosters", 0.62)
@@ -157,7 +160,7 @@ class TestAC02LeanTemplate:
         mv = _market_view(0.55, 0.45)
         rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "55%" in rationale
-        assert "Ralph leans" in rationale
+        assert "Roosters" in rationale
 
     def test_four_lean_templates_exist(self) -> None:
         assert len(LEAN_TEMPLATES) == 4
@@ -175,7 +178,8 @@ class TestAC03CoinFlipTemplate:
         tip = _tip("Sydney Roosters", 0.52)
         mv = _market_view(0.52, 0.48)
         rationale = generate_rationale(tip, mv, game_index=0, offline=True)
-        assert "Honestly?" in rationale
+        # Coin flip template 0 contains "spread means the market genuinely cannot separate"
+        assert "market genuinely cannot separate" in rationale
 
     def test_coin_flip_rationale_contains_pick_name(self) -> None:
         tip = _tip("Sydney Roosters", 0.52)
@@ -507,7 +511,8 @@ class TestTemplateContentIntegrity:
 
     def test_venue_appears_in_rationale(self) -> None:
         """Venue appears in templates that reference it."""
-        tip = _tip("Sydney Roosters", 0.75)
-        mv = _market_view(0.75, 0.25)
+        tip = _tip("Sydney Roosters", 0.52)
+        mv = _market_view(0.52, 0.48)
+        # Coin flip template 0 references {venue}
         rationale = generate_rationale(tip, mv, game_index=0, offline=True)
         assert "Allianz Stadium" in rationale

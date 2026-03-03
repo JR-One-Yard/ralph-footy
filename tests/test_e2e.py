@@ -1,15 +1,14 @@
-"""End-to-end integration test for the full Ralph pipeline.
+"""End-to-end integration test for the full pipeline.
 
 Exercises the complete tip-generation pipeline with realistic fixture
-data from Round 1 2025, validating that every module works together
-correctly from fixture loading through to file output.
+data, validating that every module works together correctly from
+fixture loading through to file output.
 """
 
 from __future__ import annotations
 
 import json
 import re
-import shutil
 from pathlib import Path
 
 import pytest
@@ -21,28 +20,111 @@ from ralph.teaching import generate_teaching_snippet
 from ralph.tips import generate_round_tips
 from ralph.tracking import save_tips_log
 
-# Path to the real Round 1 fixture file in the project.
-_FIXTURE_SOURCE = Path(__file__).resolve().parent.parent / "data" / "rounds" / "round_01.json"
+# Inline fixture data — no dependency on external files.
+_FIXTURE_DATA = {
+    "round_number": 1,
+    "season": 2026,
+    "fixtures": [
+        {
+            "home_team": "Sydney Roosters",
+            "away_team": "Brisbane Broncos",
+            "venue": "Allianz Stadium",
+            "kickoff": "2026-03-05T20:00",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.55, "away_odds": 2.50},
+                {"source": "TAB", "home_odds": 1.52, "away_odds": 2.55},
+            ],
+        },
+        {
+            "home_team": "Penrith Panthers",
+            "away_team": "Cronulla Sharks",
+            "venue": "BlueBet Stadium",
+            "kickoff": "2026-03-06T18:00",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.40, "away_odds": 3.00},
+                {"source": "TAB", "home_odds": 1.38, "away_odds": 3.10},
+            ],
+        },
+        {
+            "home_team": "Melbourne Storm",
+            "away_team": "Canterbury Bulldogs",
+            "venue": "AAMI Park",
+            "kickoff": "2026-03-06T19:55",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.30, "away_odds": 3.50},
+                {"source": "TAB", "home_odds": 1.32, "away_odds": 3.40},
+            ],
+        },
+        {
+            "home_team": "Parramatta Eels",
+            "away_team": "North Queensland Cowboys",
+            "venue": "CommBank Stadium",
+            "kickoff": "2026-03-07T15:00",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.80, "away_odds": 2.05},
+                {"source": "TAB", "home_odds": 1.78, "away_odds": 2.08},
+            ],
+        },
+        {
+            "home_team": "Gold Coast Titans",
+            "away_team": "Wests Tigers",
+            "venue": "Cbus Super Stadium",
+            "kickoff": "2026-03-07T17:30",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.65, "away_odds": 2.30},
+                {"source": "TAB", "home_odds": 1.62, "away_odds": 2.35},
+            ],
+        },
+        {
+            "home_team": "Manly Sea Eagles",
+            "away_team": "South Sydney Rabbitohs",
+            "venue": "4 Pines Park",
+            "kickoff": "2026-03-07T19:35",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.72, "away_odds": 2.15},
+                {"source": "TAB", "home_odds": 1.70, "away_odds": 2.20},
+            ],
+        },
+        {
+            "home_team": "Canberra Raiders",
+            "away_team": "New Zealand Warriors",
+            "venue": "GIO Stadium",
+            "kickoff": "2026-03-08T14:00",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.85, "away_odds": 2.00},
+                {"source": "TAB", "home_odds": 1.83, "away_odds": 2.02},
+            ],
+        },
+        {
+            "home_team": "Newcastle Knights",
+            "away_team": "St George Illawarra Dragons",
+            "venue": "McDonald Jones Stadium",
+            "kickoff": "2026-03-08T16:05",
+            "odds": [
+                {"source": "Sportsbet", "home_odds": 1.90, "away_odds": 1.95},
+                {"source": "TAB", "home_odds": 1.88, "away_odds": 1.97},
+            ],
+        },
+    ],
+}
 
 
 @pytest.fixture()
 def e2e_data_dir(tmp_path: Path) -> Path:
-    """Create a temporary data directory seeded with the real Round 1 fixture.
-
-    Copies `data/rounds/round_01.json` into a tmp_path layout so the
-    test is fully isolated from the real data directory.
+    """Create a temporary data directory seeded with inline fixture data.
 
     Returns the tmp_path root (acts as the data_dir override for all
     pipeline functions that accept one).
     """
     rounds_dir = tmp_path / "rounds"
     rounds_dir.mkdir()
-    shutil.copy(_FIXTURE_SOURCE, rounds_dir / "round_01.json")
+    fixture_file = rounds_dir / "round_01.json"
+    fixture_file.write_text(json.dumps(_FIXTURE_DATA), encoding="utf-8")
     return tmp_path
 
 
 class TestEndToEndPipeline:
-    """Full pipeline integration test using real Round 1 data."""
+    """Full pipeline integration test using inline fixture data."""
 
     # ------------------------------------------------------------------
     # Run the pipeline once and cache results for all assertions
@@ -50,7 +132,7 @@ class TestEndToEndPipeline:
 
     @pytest.fixture(autouse=True)
     def _run_pipeline(self, e2e_data_dir: Path) -> None:
-        """Execute the complete Ralph pipeline, storing results on self."""
+        """Execute the complete pipeline, storing results on self."""
         # 1. Load fixtures
         rounds_dir = e2e_data_dir / "rounds"
         self.games, self.odds_map = load_fixtures(1, data_dir=rounds_dir)
@@ -59,7 +141,7 @@ class TestEndToEndPipeline:
         self.market_views = build_market_views(self.games, self.odds_map)
 
         # 3. Generate tips (includes rationale)
-        season = self.games[0].kickoff.year if self.games else 2025
+        season = self.games[0].kickoff.year if self.games else 2026
         self.round_tips = generate_round_tips(self.market_views, 1, season)
 
         # 4. Generate teaching snippet and attach

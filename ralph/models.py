@@ -1,4 +1,4 @@
-"""Data models for Ralph — NRL Footy Forecaster."""
+"""Data models for NRL_FOOTIEFORECASTER."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ class Odds:
 
 @dataclass
 class Tip:
-    """Ralph's tip for a single game."""
+    """A tip for a single game."""
 
     game: Game
     pick: str

@@ -1,6 +1,6 @@
-"""Rationale generation — Claude API-powered explanations in Ralph's voice.
+"""Rationale generation — Claude API-powered explanations for NRL_FOOTIEFORECASTER.
 
-Each tip gets a short, cheeky rationale explaining WHY Ralph picked that team.
+Each tip gets a short, precise rationale explaining WHY that team was picked.
 When online, rationales are generated via the Claude API using quant metrics.
 When offline (or on API failure), enriched templates are used as fallback.
 """
@@ -20,44 +20,42 @@ logger = logging.getLogger(__name__)
 
 LOCK_TEMPLATES: list[str] = [
     (
-        "Ralph is backing the {pick} hard here. The market has them at"
-        " {pick_prob_pct} {home_or_away} at {venue} — {market_confidence}."
-        " {quant_signal}. The {other} would need something special to pull this off."
+        "The {pick} at {pick_prob_pct} {home_or_away} is as close to a certainty"
+        " as the NRL gets. {market_confidence} across bookmakers, EV of {ev_fav}."
+        " {quant_signal}. Back them."
     ),
     (
-        "This is as close to a sure thing as footy gets. The {pick} are"
-        " {pick_prob_pct} favourites (EV: {ev_fav}) and the bookies are"
-        " {market_confidence} on this one. Back the {pick}."
+        "Market consensus has the {pick} at {pick_prob_pct} favourites with an"
+        " EV of {ev_fav} — the numbers stack up cleanly. The {other} would need"
+        " something extraordinary to turn this over. Lock it in."
     ),
     (
-        "At {pick_best_odds}, the {pick} are short but the numbers stack up"
-        " (Kelly says {kelly_fav} of your bankroll). {market_confidence}"
-        " across the bookmakers. Lock it in."
+        "At {pick_best_odds}, the {pick} are short but Kelly says {kelly_fav} of"
+        " bankroll — that's a real edge, not just a hunch. {market_confidence}"
+        " across the bookmakers. This is a confident back."
     ),
     (
-        "Ralph doesn't like to use the word 'certainty' in footy, but the"
-        " {pick} at {pick_prob_pct} {home_or_away} is about as confident as"
-        " he gets. Spread is {spread_pct} — {market_confidence}."
-        " The {other} at {other_best_odds} are a genuine roughie."
+        "The spread is {spread_pct} — {market_confidence} — and the {pick} at"
+        " {pick_prob_pct} {home_or_away} have the strongest market signal this"
+        " round. The {other} at {other_best_odds} are a genuine roughie."
     ),
 ]
 
 LEAN_TEMPLATES: list[str] = [
     (
-        "Ralph leans {pick} here — the market has them at {pick_prob_pct}"
-        " {home_or_away} at {venue}. {quant_signal}."
-        " The {other} are capable of making this ugly, but you'd want better"
-        " odds to back them."
+        "The {pick} are {pick_prob_pct} {home_or_away} at {venue}."
+        " {quant_signal}. The {other} are capable of making this uncomfortable,"
+        " but you'd want better odds to back them."
     ),
     (
-        "The {pick} are favoured at {pick_prob_pct} and Ralph reckons that's"
-        " fair. EV is {ev_fav} on the {pick}, {ev_dog} on the {other}."
-        " Not a certainty — but Ralph's going with the market."
+        "Market has the {pick} at {pick_prob_pct} and the data supports it."
+        " EV is {ev_fav} on the {pick}, {ev_dog} on the {other}."
+        " Not a certainty — but the expected value says follow the market."
     ),
     (
-        "Market says {pick} at {pick_prob_pct}, Ralph says yeah, fair enough."
-        " Bookmaker spread is {spread_pct} ({market_confidence})."
-        " The {pick} should get the job done {home_or_away}."
+        "The {pick} at {pick_prob_pct} — bookmaker spread is {spread_pct}"
+        " ({market_confidence}). The implied probability gives them the"
+        " edge {home_or_away}."
     ),
     (
         "This one leans {pick} — they're {pick_prob_pct} favourites."
@@ -68,26 +66,26 @@ LEAN_TEMPLATES: list[str] = [
 
 COIN_FLIP_TEMPLATES: list[str] = [
     (
-        "Honestly? This one could go either way. The market has {pick} at a"
-        " slight edge ({pick_prob_pct}) but the spread is just {spread_pct}"
-        " — {market_confidence}. Going {pick} because someone has to pick."
+        "A {spread_pct} spread means the market genuinely cannot separate"
+        " these two. {pick} at {pick_prob_pct} gets the nod, but at this"
+        " margin you're betting on noise. {venue} and home advantage are"
+        " the tiebreaker."
     ),
     (
-        "Ralph is going {pick} here, but it's basically a coin flip at"
-        " {pick_prob_pct}. {quant_signal}."
-        " {pick_best_odds} vs {other_best_odds}. This is the kind of game"
-        " that makes tipping comps fun (and frustrating)."
+        "The {pick} at {pick_prob_pct} — but this is basically a coin flip."
+        " {quant_signal}. {pick_best_odds} vs {other_best_odds}. This is"
+        " the kind of game that makes tipping comps interesting."
     ),
     (
         "The thinnest of margins separates these two. {pick} at"
-        " {pick_prob_pct} gets the Ralph nod — EV is {ev_fav} vs {ev_dog}."
+        " {pick_prob_pct} — EV is {ev_fav} vs {ev_dog}."
         " {venue} could be the decider."
     ),
     (
-        "If someone at the pub told you they KNEW who'd win this one, walk"
-        " away — they're dreaming. Ralph has {pick} at {pick_prob_pct}"
-        " but the {other} at {other_best_odds} are just as likely."
-        " {market_confidence}. Pencil in {pick} and hope."
+        "Anyone claiming certainty on this game is selling you something."
+        " The {pick} at {pick_prob_pct} edge is within the noise."
+        " The {other} at {other_best_odds} are just as likely."
+        " {market_confidence}. Pencil in {pick} and move on."
     ),
 ]
 
@@ -228,17 +226,22 @@ def generate_rationale_template(
 # ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """\
-You are Ralph, a cheeky Australian footy forecaster with a quant edge. \
-You explain NRL tipping picks in 2-3 punchy sentences that weave in \
-quantitative concepts naturally. You're the smartest bloke at the pub — \
-never condescending, always entertaining. Use Australian English.
+You are NRL_FOOTIEFORECASTER, a quantitative NRL tipping system that explains \
+its picks with precision and clarity. You combine market consensus data with \
+statistical reasoning and communicate complex ideas in plain, confident language. \
+You respect your audience's intelligence — you never talk down to them, but you \
+also don't assume they have a stats degree.
 
 Rules:
-- 2-3 sentences ONLY, under 400 characters total.
-- Weave in at least ONE quant concept (EV, Kelly, spread, overround, implied prob).
+- 2-3 sentences ONLY, under 600 characters total.
+- Weave in at least ONE quantitative concept (EV, Kelly criterion, market spread, \
+overround, implied probability, convergence, calibration).
 - Mention the picked team by mascot name (e.g. "Roosters" not "Sydney Roosters").
-- Never hedge excessively — be opinionated.
+- Be direct and opinionated. No hedging, no false humility.
+- Use precise language. If "expected value" is the right term, use it. \
+If a simpler word conveys the same meaning without losing precision, prefer it.
 - No bullet points, no headers, no markdown.
+- Use Australian English.
 """
 
 
@@ -265,7 +268,7 @@ def _build_api_prompt(
     odds_block = "\n".join(odds_lines)
 
     return f"""\
-Write Ralph's rationale for this NRL pick.
+Write the rationale for this NRL pick.
 
 Game: {game.home_team} vs {game.away_team}
 Venue: {game.venue}
@@ -289,7 +292,7 @@ Quant metrics:
 
 Your job is to SUPPORT this pick — explain why it's the right call. Do not argue for the other team.
 
-Write 2-3 sentences as Ralph. Mention {pick_short} and {other_short} by mascot name."""
+Write 2-3 sentences. Mention {pick_short} and {other_short} by mascot name."""
 
 
 def generate_rationale_api(
@@ -369,7 +372,7 @@ def generate_rationale(
 
     Returns
     -------
-    A 2-3 sentence rationale string in Ralph's voice.
+    A 2-3 sentence rationale string.
     """
     # Try API-powered rationale first
     if not offline and game_analysis is not None:

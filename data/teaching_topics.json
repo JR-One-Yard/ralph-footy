@@ -1,0 +1,74 @@
+{
+  "topics": [
+    {
+      "id": 1,
+      "title": "Implied Probability",
+      "category": "Statistics & Probability",
+      "template": "The {biggest_fav} are paying {biggest_fav_odds} this round. Flip that: 1 ÷ {biggest_fav_odds} = {example_raw_pct}. That's the raw implied probability — the market's estimate of their win chance, polluted by the bookmaker's margin. Strip the margin (we do this for every game), and you get {biggest_fav_prob}. The difference between {example_raw_pct} and {biggest_fav_prob} is what the bookie charges you for the privilege of accessing the market's intelligence.",
+      "fallback": "A team paying $1.50 implies a raw win probability of 67%. But that's polluted by the bookmaker's margin — their numbers always sum to more than 100%. Strip the margin and you get the true implied probability, always lower than the raw number. The difference is what the bookie charges you for the privilege of accessing the market's intelligence."
+    },
+    {
+      "id": 2,
+      "title": "The Overround — The House's Edge",
+      "category": "Statistics & Probability",
+      "template": "Look at any single game this round and add the two raw implied probabilities. You'll get something like 105-108%, not 100%. That surplus is the overround — the bookie's guaranteed profit margin baked into every market. Across {num_games} games this round, they're skimming that edge eight times over. We remove it so every probability we show you sums to exactly 100%. When you see {biggest_fav} at {biggest_fav_prob}, that's the clean number.",
+      "fallback": "Look at any game and add the two raw implied probabilities. You'll get something like 105-108%, not 100%. That surplus is the overround — the bookie's guaranteed profit margin baked into every market. We remove it so every probability we show you sums to exactly 100%. When you see a team at 65%, that's the clean number, not the inflated one."
+    },
+    {
+      "id": 3,
+      "title": "Monte Carlo Convergence",
+      "category": "Statistics & Probability",
+      "template": "We're {round_number} round(s) in. You've seen roughly {num_games} tips per round. That's maybe {round_number}×{num_games} total predictions — and that's nowhere near enough to judge a forecaster. The Central Limit Theorem says estimation precision scales with √N. At N=80 you're at √80 ≈ 9 — the confidence interval around our true accuracy is still ±10%. A 65% tipper can look like a 55% tipper or a 75% tipper at this sample size. Judge us after Round 20, not Round {round_number}.",
+      "fallback": "After a few rounds you've seen maybe 30-40 predictions — nowhere near enough to judge a forecaster. The Central Limit Theorem says estimation precision scales with √N. At N=40 you're at √40 ≈ 6 — the confidence interval around true accuracy is still enormous. A 65% tipper can look like a 55% tipper or a 75% tipper at this sample size. Judge after Round 20, not after a handful of weeks."
+    },
+    {
+      "id": 4,
+      "title": "Brier Score — How to Judge a Forecaster",
+      "category": "Statistics & Probability",
+      "template": "This round has {num_locks} lock(s) — games where we're assigning 70%+ confidence. If those locks win, our Brier Score improves significantly. If they lose, it tanks. That's the beauty of Brier: it's the mean squared error between predicted probability and outcome. Saying 70% and being right costs you (1-0.7)²=0.09. Saying 70% and being wrong costs you (0-0.7)²=0.49. The maths punishes overconfidence five times harder than it rewards correct confidence. Below 0.20 is good. Below 0.10 is elite.",
+      "fallback": "The Brier Score is the mean squared error between predicted probability and outcome. Saying 70% and being right costs you (1-0.7)²=0.09. Saying 70% and being wrong costs you (0-0.7)²=0.49. The maths punishes overconfidence five times harder than it rewards correct confidence. That's why a forecaster who always says 50% scores 0.25 — and anything worse than that means you'd have been better off admitting ignorance. Below 0.20 is good. Below 0.10 is elite."
+    },
+    {
+      "id": 5,
+      "title": "Expected Value — The Only Edge That Matters",
+      "category": "Statistics & Probability",
+      "template": "The tightest game this round is {closest_game_home} vs {closest_game_away} at {closest_game_prob}. At that probability, the expected value on either side is essentially zero — which is exactly why the market can't separate them. EV = (true probability × payout) - stake. When EV is positive, you have an edge. When it's near zero, you're flipping a coin with a transaction cost. Over thousands of bets, EV is the only thing that matters. Gut feel converges to zero.",
+      "fallback": "In the tightest games, the expected value on either side is essentially zero — which is exactly why the market can't separate them. EV = (true probability × payout) - stake. When EV is positive, you have an edge. When it's near zero, you're flipping a coin with a transaction cost. Over thousands of bets, EV is the only thing that matters. Gut feel converges to zero."
+    },
+    {
+      "id": 6,
+      "title": "Particle Filtering — Updating on New Information",
+      "category": "Quantitative Methods",
+      "template": "Right now the {biggest_fav} sit at {biggest_fav_prob}. But that number isn't fixed — it's a snapshot. If their halfback fails a fitness test at 6pm, the market reprices in minutes. That's particle filtering in action: each new data point shifts the probability distribution. The odds you see at tip time are the market's best estimate given everything known at that moment. By kickoff, they could look completely different. The closer to kickoff you lock in, the more information is priced in.",
+      "fallback": "The odds you see right now aren't fixed — they're a snapshot. If a key player fails a fitness test at 6pm, the market reprices in minutes. That's particle filtering in action: each new data point shifts the probability distribution. The closer to kickoff you lock in, the more information is priced in. Pre-game odds are the market's best estimate given everything known at that moment. By kickoff, they could look completely different."
+    },
+    {
+      "id": 7,
+      "title": "Zero-Intelligence Markets",
+      "category": "Market Efficiency",
+      "template": "This round has {num_coin_flips} coin-flip game(s) — games where even the collective intelligence of thousands of punters can't find a clear favourite. And yet the prices are still informative. In 1993, Gode and Sunder proved that markets produce efficient prices even when every individual trader is irrational. The mechanism itself — bids matching asks — generates intelligence that no participant possesses. That's why we trust {biggest_fav} at {biggest_fav_prob} over any single expert's opinion. It's not one person being right. It's the structure being right.",
+      "fallback": "In 1993, Gode and Sunder proved something remarkable: markets produce efficient prices even when every individual trader is irrational. The mechanism itself — bids matching asks — generates intelligence that no participant possesses. That's why we trust bookmaker odds over any single expert's opinion. It's not one person being right. It's the structure being right. Even in games the market can't separate, the price is telling you something important: nobody knows."
+    },
+    {
+      "id": 8,
+      "title": "Tail Dependence — Correlated Upsets",
+      "category": "Quantitative Methods",
+      "template": "There are {num_coin_flips} coin-flip game(s) this round. If you're thinking 'well, the favourites should win most of the rest' — be careful. Upsets cluster. Wet weather hits multiple games. Short turnarounds compound fatigue across the slate. The Gaussian copula assumes extreme events are independent; the 2008 financial crisis proved that catastrophically wrong. Same logic here: if one underdog wins, the conditional probability of others winning rises. {num_coin_flips} coin flips plus correlation means this round's upset count has a fat right tail.",
+      "fallback": "Upsets cluster. Wet weather hits multiple games. Short turnarounds compound fatigue across the slate. The Gaussian copula assumes extreme events are independent; the 2008 financial crisis proved that catastrophically wrong. Same logic applies to NRL: if one underdog wins, the conditional probability of others winning rises. A round with several coin flips plus correlation means the upset count has a fat right tail — more blowup weeks than a naive model would predict."
+    },
+    {
+      "id": 9,
+      "title": "Variance Reduction — Smarter, Not Harder",
+      "category": "Quantitative Methods",
+      "template": "We're processing {num_games} games this round. For each, we aggregate odds from multiple bookmakers rather than trusting one. That's a variance reduction technique — specifically, it's a form of control variates. Each bookmaker is a noisy estimator of the true probability. By averaging them and stripping the overround, we get a cleaner signal than any single source provides. Antithetic variates, stratification, importance sampling — these are all ways quants extract more signal from less data. The principle is always the same: don't brute-force it when you can be clever about it.",
+      "fallback": "For each game, we aggregate odds from multiple bookmakers rather than trusting one. That's a variance reduction technique — each bookmaker is a noisy estimator of the true probability. By averaging them and stripping the overround, we get a cleaner signal than any single source provides. Antithetic variates, stratification, importance sampling — these are all ways quants extract more signal from less data. The principle is always the same: don't brute-force it when you can be clever about it."
+    },
+    {
+      "id": 10,
+      "title": "Anchoring Bias and Base Rates",
+      "category": "Behavioural / Decision Science",
+      "template": "Before you saw our numbers, you probably had a gut feel about the {biggest_fav}. Maybe a mate said they'd win easy. Maybe you saw a headline. That first number is your anchor, and it biases every estimate you make after it. The {biggest_fav} at {biggest_fav_prob} is the market's anchor — derived from thousands of bets, not one person's hunch. Starting from that base rate instead of your gut is the single most impactful correction you can make to your tipping. It won't always be right. But it'll be wrong less often than you will.",
+      "fallback": "Before you saw these numbers, you probably had a gut feel about every game. Maybe a mate said one team would win easy. Maybe you saw a headline. That first number is your anchor, and it biases every estimate you make after it. The market's number — derived from thousands of bets — is a better anchor than any single person's hunch. Starting from that base rate instead of your gut is the single most impactful correction you can make to your tipping. It won't always be right. But it'll be wrong less often than you will."
+    }
+  ]
+}
